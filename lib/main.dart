@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/timer_state.dart';
+import 'services/bell_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,9 @@ void main() {
 }
 
 class ZazenTimerApp extends StatelessWidget {
-  const ZazenTimerApp({super.key});
+  const ZazenTimerApp({super.key, this.bellService});
+
+  final BellService? bellService;
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +33,15 @@ class ZazenTimerApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF8A9A7B),
         scaffoldBackgroundColor: const Color(0xFF141514),
       ),
-      home: const ZazenTimerHomePage(),
+      home: ZazenTimerHomePage(bellService: bellService),
     );
   }
 }
 
 class ZazenTimerHomePage extends StatefulWidget {
-  const ZazenTimerHomePage({super.key});
+  const ZazenTimerHomePage({super.key, this.bellService});
+
+  final BellService? bellService;
 
   @override
   State<ZazenTimerHomePage> createState() => _ZazenTimerHomePageState();
@@ -44,6 +49,7 @@ class ZazenTimerHomePage extends StatefulWidget {
 
 class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
   late ZazenTimerState _timerState;
+  late final BellService _bellService;
   Timer? _ticker;
 
   final List<int> _presetMinutes = [10, 15, 20, 25, 30, 45];
@@ -51,12 +57,16 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
   @override
   void initState() {
     super.initState();
+    _bellService = widget.bellService ?? AudioBellService();
     _timerState = ZazenTimerState.initial();
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    if (widget.bellService == null) {
+      _bellService.dispose();
+    }
     super.dispose();
   }
 
@@ -83,6 +93,8 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else {
+        // Direct sitting start -> play 3 bells
+        _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
             phase: ZazenPhase.sitting,
@@ -114,7 +126,8 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
       });
     } else {
       if (_timerState.phase == ZazenPhase.preparation) {
-        // Transition from prep to sitting
+        // Transition from prep to sitting -> play 3 bells to begin zazen
+        _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
             phase: ZazenPhase.sitting,
@@ -123,8 +136,9 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else if (_timerState.phase == ZazenPhase.sitting) {
-        // Finished
+        // Finished -> play 3 bells to conclude zazen
         _ticker?.cancel();
+        _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
             phase: ZazenPhase.completed,
@@ -138,6 +152,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
 
   void _pauseTimer() {
     _ticker?.cancel();
+    _bellService.stop();
     setState(() {
       _timerState = _timerState.copyWith(status: TimerStatus.paused);
     });
@@ -145,9 +160,21 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
 
   void _resetTimer() {
     _ticker?.cancel();
+    _bellService.stop();
     setState(() {
       _timerState = ZazenTimerState.initial(_timerState.config);
     });
+  }
+
+  void _testBell() {
+    _bellService.playThreeBells();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Playing 3 Tibetan bell dings (2s interval)...'),
+        duration: Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   String _getPhaseTitle() {
@@ -175,16 +202,26 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header
+              // Header with title and test bell action
               Column(
                 children: [
-                  const SizedBox(height: 16),
-                  Text(
-                    _getPhaseTitle(),
-                    style: textTheme.headlineSmall?.copyWith(
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 48), // Balancer
+                      Text(
+                        _getPhaseTitle(),
+                        style: textTheme.headlineSmall?.copyWith(
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        tooltip: 'Test Tibetan Bell (3 dings)',
+                        onPressed: _testBell,
+                      ),
+                    ],
                   ),
                   if (_timerState.phase == ZazenPhase.sitting)
                     Padding(
