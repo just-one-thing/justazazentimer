@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/timer_state.dart';
 import 'services/bell_service.dart';
+import 'services/session_alarm_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,9 +12,14 @@ void main() {
 }
 
 class ZazenTimerApp extends StatelessWidget {
-  const ZazenTimerApp({super.key, this.bellService});
+  const ZazenTimerApp({
+    super.key,
+    this.bellService,
+    this.alarmService,
+  });
 
   final BellService? bellService;
+  final SessionAlarmService? alarmService;
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +39,23 @@ class ZazenTimerApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF8A9A7B),
         scaffoldBackgroundColor: const Color(0xFF141514),
       ),
-      home: ZazenTimerHomePage(bellService: bellService),
+      home: ZazenTimerHomePage(
+        bellService: bellService,
+        alarmService: alarmService,
+      ),
     );
   }
 }
 
 class ZazenTimerHomePage extends StatefulWidget {
-  const ZazenTimerHomePage({super.key, this.bellService});
+  const ZazenTimerHomePage({
+    super.key,
+    this.bellService,
+    this.alarmService,
+  });
 
   final BellService? bellService;
+  final SessionAlarmService? alarmService;
 
   @override
   State<ZazenTimerHomePage> createState() => _ZazenTimerHomePageState();
@@ -50,6 +64,7 @@ class ZazenTimerHomePage extends StatefulWidget {
 class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
   late ZazenTimerState _timerState;
   late final BellService _bellService;
+  late final SessionAlarmService _alarmService;
   Timer? _ticker;
 
   final List<int> _presetMinutes = [10, 15, 20, 25, 30, 45];
@@ -58,12 +73,16 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
   void initState() {
     super.initState();
     _bellService = widget.bellService ?? AudioBellService();
+    _alarmService = widget.alarmService ?? AndroidSessionAlarmService();
+    _alarmService.initialize();
     _timerState = ZazenTimerState.initial();
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    _alarmService.setScreenWakelock(false);
+    _alarmService.cancelSessionEndAlarm();
     if (widget.bellService == null) {
       _bellService.dispose();
     }
@@ -84,6 +103,8 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     if (_timerState.phase == ZazenPhase.idle ||
         _timerState.phase == ZazenPhase.completed) {
       if (_timerState.config.prepDuration.inSeconds > 0) {
+        // Preparation phase
+        _alarmService.setScreenWakelock(true);
         setState(() {
           _timerState = _timerState.copyWith(
             phase: ZazenPhase.preparation,
@@ -93,7 +114,11 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else {
-        // Direct sitting start -> play 3 bells
+        // Direct sitting start -> schedule alarm, wakelock & play 3 bells
+        _alarmService.setScreenWakelock(true);
+        _alarmService.scheduleSessionEndAlarm(
+          duration: _timerState.config.sittingDuration,
+        );
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -104,6 +129,17 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       }
+    } else if (_timerState.status == TimerStatus.paused) {
+      // Resuming
+      _alarmService.setScreenWakelock(true);
+      if (_timerState.phase == ZazenPhase.sitting) {
+        _alarmService.scheduleSessionEndAlarm(
+          duration: Duration(seconds: _timerState.remainingSeconds),
+        );
+      }
+      setState(() {
+        _timerState = _timerState.copyWith(status: TimerStatus.running);
+      });
     } else {
       setState(() {
         _timerState = _timerState.copyWith(status: TimerStatus.running);
@@ -126,7 +162,11 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
       });
     } else {
       if (_timerState.phase == ZazenPhase.preparation) {
-        // Transition from prep to sitting -> play 3 bells to begin zazen
+        // Transition from prep to sitting:
+        // Schedule exact alarm for the full sitting duration and play 3 bells
+        _alarmService.scheduleSessionEndAlarm(
+          duration: _timerState.config.sittingDuration,
+        );
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -136,8 +176,10 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else if (_timerState.phase == ZazenPhase.sitting) {
-        // Finished -> play 3 bells to conclude zazen
+        // Finished -> cancel scheduled alarm, release wakelock & play 3 bells
         _ticker?.cancel();
+        _alarmService.setScreenWakelock(false);
+        _alarmService.cancelSessionEndAlarm();
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -152,6 +194,8 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
 
   void _pauseTimer() {
     _ticker?.cancel();
+    _alarmService.setScreenWakelock(false);
+    _alarmService.cancelSessionEndAlarm();
     _bellService.stop();
     setState(() {
       _timerState = _timerState.copyWith(status: TimerStatus.paused);
@@ -160,6 +204,8 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
 
   void _resetTimer() {
     _ticker?.cancel();
+    _alarmService.setScreenWakelock(false);
+    _alarmService.cancelSessionEndAlarm();
     _bellService.stop();
     setState(() {
       _timerState = ZazenTimerState.initial(_timerState.config);
@@ -202,7 +248,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header with title and test bell action
+              // Header with title and actions
               Column(
                 children: [
                   Row(
