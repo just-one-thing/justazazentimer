@@ -6,11 +6,21 @@ A minimalist, distraction-free Zazen (Zen meditation) timer app built with Flutt
 - **Target OS**: Android 15 (API 35) and newer (Android 16+ ready)
 - **Language**: Dart (Flutter 3.47+) & Kotlin (AGP 9.1+)
 - **Design**: Clean Material 3 zen aesthetic, supporting light and dark themes with system edge-to-edge support.
+- **Audio**: Tibetan singing bowl sound (3 dings spaced 2 seconds apart at start and end).
+- **Silent Mode Bypass**: Configured with Android Alarm stream (`USAGE_ALARM`) audio attributes to play audibly even when the phone ringer is set to Silent or Vibrate.
+- **Do Not Disturb (DND) Integration**: Automatically silences calls and notification interruptions (`INTERRUPTION_FILTER_ALARMS`) during meditation sitting and restores normal mode upon session end.
+- **Background Wakeup**: Android exact alarms (`AlarmManager.setExactAndAllowWhileIdle`), wake-lock management, and native system notification sound in Android `res/raw/`.
 
 ## Project Structure
-- [`lib/main.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/main.dart) - Main app entry point and meditation timer UI
+- [`lib/main.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/main.dart) - Main app entry point, DND management, and meditation timer UI
 - [`lib/models/timer_state.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/models/timer_state.dart) - Timer configuration and state model
+- [`lib/services/bell_service.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/services/bell_service.dart) - Tibetan bell audio playback service with Alarm stream context
+- [`lib/services/dnd_service.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/services/dnd_service.dart) - Android Do Not Disturb platform channel service
+- [`lib/services/session_alarm_service.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/services/session_alarm_service.dart) - Exact alarm and screen wakelock service
 - [`test/models/timer_state_test.dart`](file:///home/lorenzo/Workspace/justazazentimer/test/models/timer_state_test.dart) - Unit tests for timer logic
+- [`test/services/bell_service_test.dart`](file:///home/lorenzo/Workspace/justazazentimer/test/services/bell_service_test.dart) - Unit tests for bell audio service
+- [`test/services/dnd_service_test.dart`](file:///home/lorenzo/Workspace/justazazentimer/test/services/dnd_service_test.dart) - Unit tests for DND service
+- [`test/services/session_alarm_service_test.dart`](file:///home/lorenzo/Workspace/justazazentimer/test/services/session_alarm_service_test.dart) - Unit tests for alarm and wakelock service
 - [`test/widget_test.dart`](file:///home/lorenzo/Workspace/justazazentimer/test/widget_test.dart) - Widget and UI interaction tests
 - [`android/app/build.gradle.kts`](file:///home/lorenzo/Workspace/justazazentimer/android/app/build.gradle.kts) - Android build configuration (Kotlin DSL, `compileSdk 35`, `targetSdk 35`)
 
@@ -26,6 +36,9 @@ flutter test
 
 # Run a specific test file
 flutter test test/widget_test.dart
+flutter test test/services/dnd_service_test.dart
+flutter test test/services/bell_service_test.dart
+flutter test test/services/session_alarm_service_test.dart
 flutter test test/models/timer_state_test.dart
 
 # Run tests with code coverage
