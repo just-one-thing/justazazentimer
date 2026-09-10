@@ -55,6 +55,8 @@ class AndroidSessionAlarmService implements SessionAlarmService {
         sound: const RawResourceAndroidNotificationSound('tibetan_bell_3x'),
         playSound: true,
         enableVibration: true,
+        bypassDnd: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       );
 
       final androidImplementation =

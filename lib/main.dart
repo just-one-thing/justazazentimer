@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/timer_state.dart';
 import 'services/bell_service.dart';
+import 'services/dnd_service.dart';
 import 'services/session_alarm_service.dart';
 
 void main() {
@@ -16,10 +17,12 @@ class ZazenTimerApp extends StatelessWidget {
     super.key,
     this.bellService,
     this.alarmService,
+    this.dndService,
   });
 
   final BellService? bellService;
   final SessionAlarmService? alarmService;
+  final DndService? dndService;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +45,7 @@ class ZazenTimerApp extends StatelessWidget {
       home: ZazenTimerHomePage(
         bellService: bellService,
         alarmService: alarmService,
+        dndService: dndService,
       ),
     );
   }
@@ -52,10 +56,12 @@ class ZazenTimerHomePage extends StatefulWidget {
     super.key,
     this.bellService,
     this.alarmService,
+    this.dndService,
   });
 
   final BellService? bellService;
   final SessionAlarmService? alarmService;
+  final DndService? dndService;
 
   @override
   State<ZazenTimerHomePage> createState() => _ZazenTimerHomePageState();
@@ -65,7 +71,9 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
   late ZazenTimerState _timerState;
   late final BellService _bellService;
   late final SessionAlarmService _alarmService;
+  late final DndService _dndService;
   Timer? _ticker;
+  bool _dndActive = false;
 
   final List<int> _presetMinutes = [10, 15, 20, 25, 30, 45];
 
@@ -74,7 +82,9 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     super.initState();
     _bellService = widget.bellService ?? AudioBellService();
     _alarmService = widget.alarmService ?? AndroidSessionAlarmService();
+    _dndService = widget.dndService ?? AndroidDndService();
     _alarmService.initialize();
+    _bellService.initialize();
     _timerState = ZazenTimerState.initial();
   }
 
@@ -83,10 +93,47 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     _ticker?.cancel();
     _alarmService.setScreenWakelock(false);
     _alarmService.cancelSessionEndAlarm();
+    _disableDnd();
     if (widget.bellService == null) {
       _bellService.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _enableDnd() async {
+    if (!_timerState.config.enableDndDuringSession) return;
+    final granted = await _dndService.isPermissionGranted();
+    if (granted) {
+      final success = await _dndService.enableDnd();
+      if (mounted && success) {
+        setState(() => _dndActive = true);
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Grant Do Not Disturb permission to silence interruptions.',
+            ),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => _dndService.openSettings(),
+            ),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _disableDnd() async {
+    if (_dndActive) {
+      await _dndService.disableDnd();
+      if (mounted) {
+        setState(() => _dndActive = false);
+      }
+    }
   }
 
   void _selectDuration(int minutes) {
@@ -96,6 +143,33 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     );
     setState(() {
       _timerState = ZazenTimerState.initial(newConfig);
+    });
+  }
+
+  void _toggleDndSetting(bool enable) async {
+    if (_timerState.isRunning) return;
+    if (enable) {
+      final granted = await _dndService.isPermissionGranted();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Allow Do Not Disturb access in Settings to enable this feature.',
+            ),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => _dndService.openSettings(),
+            ),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+    setState(() {
+      _timerState = _timerState.copyWith(
+        config: _timerState.config.copyWith(enableDndDuringSession: enable),
+      );
     });
   }
 
@@ -114,11 +188,12 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else {
-        // Direct sitting start -> schedule alarm, wakelock & play 3 bells
+        // Direct sitting start -> schedule alarm, wakelock, DND & play 3 bells
         _alarmService.setScreenWakelock(true);
         _alarmService.scheduleSessionEndAlarm(
           duration: _timerState.config.sittingDuration,
         );
+        _enableDnd();
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -136,6 +211,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
         _alarmService.scheduleSessionEndAlarm(
           duration: Duration(seconds: _timerState.remainingSeconds),
         );
+        _enableDnd();
       }
       setState(() {
         _timerState = _timerState.copyWith(status: TimerStatus.running);
@@ -163,10 +239,11 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     } else {
       if (_timerState.phase == ZazenPhase.preparation) {
         // Transition from prep to sitting:
-        // Schedule exact alarm for the full sitting duration and play 3 bells
+        // Schedule exact alarm, enable DND, and play 3 bells
         _alarmService.scheduleSessionEndAlarm(
           duration: _timerState.config.sittingDuration,
         );
+        _enableDnd();
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -176,10 +253,11 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           );
         });
       } else if (_timerState.phase == ZazenPhase.sitting) {
-        // Finished -> cancel scheduled alarm, release wakelock & play 3 bells
+        // Finished -> cancel scheduled alarm, release wakelock, disable DND & play 3 bells
         _ticker?.cancel();
         _alarmService.setScreenWakelock(false);
         _alarmService.cancelSessionEndAlarm();
+        _disableDnd();
         _bellService.playThreeBells();
         setState(() {
           _timerState = _timerState.copyWith(
@@ -196,6 +274,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     _ticker?.cancel();
     _alarmService.setScreenWakelock(false);
     _alarmService.cancelSessionEndAlarm();
+    _disableDnd();
     _bellService.stop();
     setState(() {
       _timerState = _timerState.copyWith(status: TimerStatus.paused);
@@ -206,6 +285,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     _ticker?.cancel();
     _alarmService.setScreenWakelock(false);
     _alarmService.cancelSessionEndAlarm();
+    _disableDnd();
     _bellService.stop();
     setState(() {
       _timerState = ZazenTimerState.initial(_timerState.config);
@@ -248,7 +328,7 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header with title and actions
+              // Header with title, DND indicator, and actions
               Column(
                 children: [
                   Row(
@@ -269,6 +349,28 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                       ),
                     ],
                   ),
+                  if (_dndActive)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.do_not_disturb_on,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Do Not Disturb Active',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (_timerState.phase == ZazenPhase.sitting)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -309,13 +411,13 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                 ),
               ),
 
-              // Preset durations & Controls
+              // Preset durations, DND toggle & Controls
               Column(
                 children: [
                   if (!_timerState.isRunning &&
-                      _timerState.phase != ZazenPhase.sitting)
+                      _timerState.phase != ZazenPhase.sitting) ...[
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 24.0),
+                      padding: const EdgeInsets.only(bottom: 12.0),
                       child: Wrap(
                         spacing: 8.0,
                         alignment: WrapAlignment.center,
@@ -331,6 +433,23 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                         }).toList(),
                       ),
                     ),
+
+                    // Do Not Disturb Preference toggle
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20.0),
+                      child: FilterChip(
+                        avatar: Icon(
+                          _timerState.config.enableDndDuringSession
+                              ? Icons.do_not_disturb_on
+                              : Icons.do_not_disturb_off_outlined,
+                          size: 16,
+                        ),
+                        label: const Text('Do Not Disturb during sitting'),
+                        selected: _timerState.config.enableDndDuringSession,
+                        onSelected: (val) => _toggleDndSetting(val),
+                      ),
+                    ),
+                  ],
 
                   // Controls
                   Row(

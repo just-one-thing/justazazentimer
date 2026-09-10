@@ -17,21 +17,26 @@ class ZazenTimerConfig {
     this.sittingDuration = const Duration(minutes: 25),
     this.prepDuration = const Duration(seconds: 10),
     this.intervalBellDuration,
+    this.enableDndDuringSession = true,
   });
 
   final Duration sittingDuration;
   final Duration prepDuration;
   final Duration? intervalBellDuration;
+  final bool enableDndDuringSession;
 
   ZazenTimerConfig copyWith({
     Duration? sittingDuration,
     Duration? prepDuration,
     Duration? intervalBellDuration,
+    bool? enableDndDuringSession,
   }) {
     return ZazenTimerConfig(
       sittingDuration: sittingDuration ?? this.sittingDuration,
       prepDuration: prepDuration ?? this.prepDuration,
       intervalBellDuration: intervalBellDuration ?? this.intervalBellDuration,
+      enableDndDuringSession:
+          enableDndDuringSession ?? this.enableDndDuringSession,
     );
   }
 }

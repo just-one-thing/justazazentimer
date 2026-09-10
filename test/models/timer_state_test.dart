@@ -3,11 +3,12 @@ import 'package:justazazentimer/models/timer_state.dart';
 
 void main() {
   group('ZazenTimerConfig', () {
-    test('default configuration has 25 min sitting and 10 sec prep', () {
+    test('default configuration has 25 min sitting and 10 sec prep with DND enabled', () {
       const config = ZazenTimerConfig();
       expect(config.sittingDuration, const Duration(minutes: 25));
       expect(config.prepDuration, const Duration(seconds: 10));
       expect(config.intervalBellDuration, isNull);
+      expect(config.enableDndDuringSession, isTrue);
     });
 
     test('copyWith properly overrides values', () {
@@ -16,10 +17,12 @@ void main() {
         sittingDuration: const Duration(minutes: 40),
         prepDuration: Duration.zero,
         intervalBellDuration: const Duration(minutes: 10),
+        enableDndDuringSession: false,
       );
       expect(updated.sittingDuration, const Duration(minutes: 40));
       expect(updated.prepDuration, Duration.zero);
       expect(updated.intervalBellDuration, const Duration(minutes: 10));
+      expect(updated.enableDndDuringSession, isFalse);
     });
   });
 
