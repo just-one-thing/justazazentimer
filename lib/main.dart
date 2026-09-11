@@ -389,6 +389,19 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (_timerState.phase == ZazenPhase.idle)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16.0),
+                          child: Image.asset(
+                            'assets/images/app_logo.png',
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
                     Text(
                       _timerState.formattedRemaining,
                       style: textTheme.displayLarge?.copyWith(
