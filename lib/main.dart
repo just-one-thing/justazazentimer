@@ -292,30 +292,6 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
     });
   }
 
-  void _testBell() {
-    _bellService.playThreeBells();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Playing 3 Tibetan bell dings (2s interval)...'),
-        duration: Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  String _getPhaseTitle() {
-    switch (_timerState.phase) {
-      case ZazenPhase.idle:
-        return 'Zazen Meditation';
-      case ZazenPhase.preparation:
-        return 'Prepare to Sit';
-      case ZazenPhase.sitting:
-        return 'Zazen';
-      case ZazenPhase.completed:
-        return 'Session Complete';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -328,30 +304,34 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header with title, DND indicator, and actions
+              // Top Area: Enlarged Logo & DND indicator
               Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 48), // Balancer
-                      Text(
-                        _getPhaseTitle(),
-                        style: textTheme.headlineSmall?.copyWith(
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w400,
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
                         ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28.0),
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.notifications_active_outlined),
-                        tooltip: 'Test Tibetan Bell (3 dings)',
-                        onPressed: _testBell,
-                      ),
-                    ],
+                    ),
                   ),
                   if (_dndActive)
                     Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
+                      padding: const EdgeInsets.only(top: 12.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -371,16 +351,6 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                         ],
                       ),
                     ),
-                  if (_timerState.phase == ZazenPhase.sitting)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Keep posture, breathe naturally',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
                 ],
               ),
 
@@ -389,23 +359,10 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_timerState.phase == ZazenPhase.idle)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16.0),
-                          child: Image.asset(
-                            'assets/images/app_logo.png',
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
                     Text(
                       _timerState.formattedRemaining,
                       style: textTheme.displayLarge?.copyWith(
-                        fontSize: 72,
+                        fontSize: 76,
                         fontWeight: FontWeight.w300,
                         letterSpacing: 2,
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -415,7 +372,11 @@ class _ZazenTimerHomePageState extends State<ZazenTimerHomePage> {
                     Text(
                       _timerState.phase == ZazenPhase.preparation
                           ? 'Get comfortable in your seat'
-                          : '${_timerState.config.sittingDuration.inMinutes} minute sitting',
+                          : (_timerState.phase == ZazenPhase.completed
+                              ? 'Session complete'
+                              : (_timerState.phase == ZazenPhase.sitting
+                                  ? 'Keep posture, breathe naturally'
+                                  : '${_timerState.config.sittingDuration.inMinutes} minute sitting')),
                       style: textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

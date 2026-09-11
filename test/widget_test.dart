@@ -19,8 +19,8 @@ void main() {
 
     expect(mockAlarm.isInitialized, isTrue);
 
-    // Verify initial text and time
-    expect(find.text('Zazen Meditation'), findsOneWidget);
+    // Verify logo and initial time display
+    expect(find.byType(Image), findsOneWidget);
     expect(find.text('25:00'), findsOneWidget);
     expect(find.text('25 minute sitting'), findsOneWidget);
     expect(find.text('Begin'), findsOneWidget);
@@ -35,7 +35,7 @@ void main() {
     expect(find.text('15 minute sitting'), findsOneWidget);
   });
 
-  testWidgets('Test Tibetan Bell icon button triggers 3 dings',
+  testWidgets('ZazenTimerApp renders top logo prominently',
       (WidgetTester tester) async {
     final mockBell = MockBellService();
     final mockAlarm = MockSessionAlarmService();
@@ -46,17 +46,13 @@ void main() {
       dndService: mockDnd,
     ));
 
-    expect(mockBell.threeBellsPlayCount, 0);
+    // Logo image is present
+    final imageFinder = find.byType(Image);
+    expect(imageFinder, findsOneWidget);
 
-    // Tap bell icon button
-    await tester.tap(find.byIcon(Icons.notifications_active_outlined));
-    await tester.pump();
-
-    expect(mockBell.threeBellsPlayCount, 1);
-    expect(
-      find.text('Playing 3 Tibetan bell dings (2s interval)...'),
-      findsOneWidget,
-    );
+    final imageWidget = tester.widget<Image>(imageFinder);
+    expect(imageWidget.width, 200);
+    expect(imageWidget.height, 200);
   });
 
   testWidgets('ZazenTimerApp starts countdown, enables wakelock and controls',
@@ -75,7 +71,7 @@ void main() {
     await tester.pump();
 
     // With prep duration (10s), phase transitions to preparation
-    expect(find.text('Prepare to Sit'), findsOneWidget);
+    expect(find.text('Get comfortable in your seat'), findsOneWidget);
     expect(find.text('00:10'), findsOneWidget);
     expect(find.text('Pause'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
@@ -90,7 +86,7 @@ void main() {
     expect(mockAlarm.cancelCount, greaterThanOrEqualTo(1));
     expect(mockAlarm.wakelockActive, isFalse);
     expect(mockDnd.isDndActive, isFalse);
-    expect(find.text('Zazen Meditation'), findsOneWidget);
+    expect(find.text('25 minute sitting'), findsOneWidget);
     expect(find.text('25:00'), findsOneWidget);
     expect(find.text('Begin'), findsOneWidget);
   });
@@ -119,7 +115,7 @@ void main() {
     // 2) Exact alarm scheduled for 25 minutes
     // 3) Wakelock kept active
     // 4) DND enabled
-    expect(find.text('Zazen'), findsOneWidget);
+    expect(find.text('Keep posture, breathe naturally'), findsOneWidget);
     expect(mockBell.threeBellsPlayCount, 1);
     expect(mockAlarm.scheduledDuration, const Duration(minutes: 25));
     expect(mockAlarm.wakelockActive, isTrue);
@@ -133,7 +129,7 @@ void main() {
     // 1) 3 bells played again
     // 2) Wakelock released
     // 3) DND disabled
-    expect(find.text('Session Complete'), findsOneWidget);
+    expect(find.text('Session complete'), findsOneWidget);
     expect(mockBell.threeBellsPlayCount, 2);
     expect(mockAlarm.wakelockActive, isFalse);
     expect(mockDnd.isDndActive, isFalse);
@@ -160,7 +156,7 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
 
     // Sitting begins without DND
-    expect(find.text('Zazen'), findsOneWidget);
+    expect(find.text('Keep posture, breathe naturally'), findsOneWidget);
     expect(mockDnd.isDndActive, isFalse);
     expect(find.text('Do Not Disturb Active'), findsNothing);
   });
