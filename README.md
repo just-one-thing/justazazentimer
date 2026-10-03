@@ -1,6 +1,10 @@
 # Just A Zazen Timer (Android)
 
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Project-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/lorenzobaracchi)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 A minimalist, distraction-free Zazen (Zen meditation) timer app built with Flutter and Kotlin.
+
 
 ## Features & Target Platform
 - **Target OS**: Android 15 (API 35) and newer (Android 16+ ready)
@@ -90,3 +94,18 @@ To test in an official Android 15 emulator:
 ```bash
 flutter analyze
 ```
+
+---
+
+## Support & Donations
+
+If you find this timer helpful for your meditation practice, consider supporting development:
+
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20on%20Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/lorenzobaracchi)
+
+---
+
+## License
+
+This project is free software, licensed under the **GNU General Public License v3.0** (GPL-3.0). See the [LICENSE](file:///home/lorenzo/Workspace/justazazentimer/LICENSE) file for complete details.
+

@@ -160,4 +160,38 @@ void main() {
     expect(mockDnd.isDndActive, isFalse);
     expect(find.text('Do Not Disturb Active'), findsNothing);
   });
+
+  testWidgets(
+      'About dialog displays app info, GPLv3 license, and Ko-fi button',
+      (WidgetTester tester) async {
+    final mockBell = MockBellService();
+    final mockAlarm = MockSessionAlarmService();
+    final mockDnd = MockDndService();
+    await tester.pumpWidget(ZazenTimerApp(
+      bellService: mockBell,
+      alarmService: mockAlarm,
+      dndService: mockDnd,
+    ));
+
+    // Tap info icon in top corner
+    final infoButtonFinder = find.byTooltip('About & Support');
+    expect(infoButtonFinder, findsOneWidget);
+    await tester.tap(infoButtonFinder);
+    await tester.pumpAndSettle();
+
+    // Verify dialog content
+    expect(find.text('Just A Zazen Timer'), findsWidgets);
+    expect(find.text('Version 1.0.0'), findsOneWidget);
+    expect(find.text('GNU GPL v3.0 License'), findsOneWidget);
+    expect(find.text('Support on Ko-fi'), findsOneWidget);
+    expect(find.text('Source Code (GitHub)'), findsOneWidget);
+
+    // Tap Close button
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+
+    // Dialog dismissed
+    expect(find.text('GNU GPL v3.0 License'), findsNothing);
+  });
 }
+
