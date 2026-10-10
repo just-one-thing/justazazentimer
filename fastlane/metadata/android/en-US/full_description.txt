@@ -1,0 +1,12 @@
+Just A Zazen Timer is a minimalist, distraction-free meditation timer crafted specifically for Zazen (Zen sitting meditation) and quiet mindfulness practice.
+
+Designed to get out of your way, it gives you everything you need for undisturbed meditation without unnecessary features, subscriptions, or clutter.
+
+Features:
+• Minimalist Zen Design: Clean Material 3 interface that respects your focus, supporting both light and dark themes.
+• Tibetan Singing Bowl: Authentic Tibetan bowl sound with three mindful dings spaced two seconds apart at the start and end of each session.
+• Silent Mode Bypass: Audio is routed through the Alarm stream, ensuring the bells ring reliably even if your phone ringer is switched to Silent or Vibrate.
+• Do Not Disturb Integration: Automatically mutes incoming calls and notification interruptions when your sitting begins, and restores your standard settings when the timer finishes.
+• Accurate Background Wakeup: Uses exact alarms and wakelock management to ensure reliable timing even when the screen is off or the phone is in deep sleep.
+• Quick Sitting Presets: Convenient 10, 15, 20, 25, 30, and 45-minute presets, plus a gentle 10-second preparation period to settle into your posture.
+• 100% Free & Open Source: No advertisements, no analytics, no tracking, and no internet connection required. Licensed under the GNU General Public License v3.0 (GPLv3).
