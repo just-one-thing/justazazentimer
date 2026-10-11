@@ -15,6 +15,26 @@ A minimalist, distraction-free Zazen (Zen meditation) timer app built with Flutt
 - **Do Not Disturb (DND) Integration**: Automatically silences calls and notification interruptions (`INTERRUPTION_FILTER_ALARMS`) during meditation sitting and restores normal mode upon session end.
 - **Background Wakeup**: Android exact alarms (`AlarmManager.setExactAndAllowWhileIdle`), wake-lock management, and native system notification sound in Android `res/raw/`.
 
+## Installation (Android)
+
+### Direct APK Download (Recommended)
+1. Go to the [Releases](https://github.com/just-one-thing/justazazentimer/releases) page on your Android device.
+2. Under the latest release, download `app-release.apk` (or `justazazentimer-vX.X.X.apk`).
+3. Open the downloaded APK file:
+   - If prompted with **"For your security, your phone is not allowed to install unknown apps from this source"**, tap **Settings** and toggle **Allow from this source**.
+4. Tap **Install**.
+
+#### Permissions Setup:
+- **Do Not Disturb (DND) Access**: If you want the app to automatically silence notifications and incoming calls while sitting, tap the DND chip in the app or go to **Settings > Apps > Special app access > Do Not Disturb access** and grant permission to *Just A Zazen Timer*.
+- **Alarms & Reminders**: Android 12+ requires exact alarm scheduling to play the ending bell accurately when the screen is turned off.
+
+### Using ADB (For Developers)
+If you have your Android phone connected to a computer with USB debugging enabled:
+```bash
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+
 ## Project Structure
 - [`lib/main.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/main.dart) - Main app entry point, DND management, and meditation timer UI
 - [`lib/models/timer_state.dart`](file:///home/lorenzo/Workspace/justazazentimer/lib/models/timer_state.dart) - Timer configuration and state model
